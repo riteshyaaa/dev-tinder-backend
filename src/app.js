@@ -1,9 +1,12 @@
+require("dotenv").config();
+const { validateEnvironment } = require("./config/environment.js");
+validateEnvironment();
+
 const express = require("express");
 const connectDB = require("./config/database.js");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const { createServer } = require("http");
-require("dotenv").config();
 
 const app = express();
 

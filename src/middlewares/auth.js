@@ -1,7 +1,5 @@
 const User = require("../models/user");
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
-const JWT_SECRET = process.env.JWT_SECRET || "Riteshy@dav89";
+const josePromise = import("jose");
 
 const userAuth = async (req, res, next) => {
   try {
@@ -11,7 +9,12 @@ const userAuth = async (req, res, next) => {
       return res.status(401).json({ error: "Please login" });
     }
 
-    const decodedObj = jwt.verify(token, JWT_SECRET);
+    const { jwtVerify } = await josePromise;
+    const { payload: decodedObj } = await jwtVerify(
+      token,
+      Buffer.from(process.env.JWT_SECRET),
+      { algorithms: ["HS256"] },
+    );
 
     if (!decodedObj) {
       return res.status(401).json({ error: "Invalid token" });
@@ -30,8 +33,10 @@ const userAuth = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
-      return res.status(401).json({ error: "Session expired. Please login again." });
+    if (err.code?.startsWith("ERR_JWT_") || err.code?.startsWith("ERR_JWS_")) {
+      return res
+        .status(401)
+        .json({ error: "Session expired. Please login again." });
     }
     return res.status(500).json({ error: "Authentication failed" });
   }

@@ -1,12 +1,18 @@
-const mongoose = require("mongoose")
-require('dotenv').config()
+const dns = require("node:dns");
 
+const configuredDnsServers = process.env.MONGODB_DNS_SERVERS
+  ?.split(",")
+  .map((server) => server.trim())
+  .filter(Boolean);
 
-const connectDB = async() => {
-await mongoose.connect("mongodb+srv://"+process.env.MONGO_DB_USERNAME+":"+process.env.MONGO_DB_PASSWORD+"@cluster0.idc8p5l.mongodb.net/devtinder"
+dns.setServers(configuredDnsServers?.length ? configuredDnsServers : ["1.1.1.1"]);
 
-)
-}
+const mongoose = require("mongoose");
 
-  module.exports = connectDB; 
+const connectDB = async () => {
+  await mongoose.connect(process.env.MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000,
+  });
+};
 
+module.exports = connectDB;

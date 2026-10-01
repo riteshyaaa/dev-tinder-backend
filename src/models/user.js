@@ -1,10 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
-const jwt = require("jsonwebtoken");
+const josePromise = import("jose");
 const bcrypt = require("bcrypt");
-require("dotenv").config();
-
-const JWT_SECRET = process.env.JWT_SECRET || "Riteshy@dav89";
 
 const UserSchema = new mongoose.Schema(
   {
@@ -45,7 +42,13 @@ const UserSchema = new mongoose.Schema(
       type: String,
       lowercase: true,
       validate(value) {
-        const allowed = ["male", "female", "non-binary", "prefer not to say", ""];
+        const allowed = [
+          "male",
+          "female",
+          "non-binary",
+          "prefer not to say",
+          "",
+        ];
         if (!allowed.includes(value)) {
           throw new Error("Invalid value for gender: " + value);
         }
@@ -103,8 +106,14 @@ const UserSchema = new mongoose.Schema(
       default: [],
       validate(value) {
         const allowed = [
-          "pair-programming", "co-founder", "mentor", "mentee",
-          "hackathon-buddy", "open-source", "networking", "job-referral",
+          "pair-programming",
+          "co-founder",
+          "mentor",
+          "mentee",
+          "hackathon-buddy",
+          "open-source",
+          "networking",
+          "job-referral",
         ];
         if (value.some((v) => !allowed.includes(v))) {
           throw new Error("Invalid lookingFor value");
@@ -158,23 +167,29 @@ const UserSchema = new mongoose.Schema(
     isBoosted: { type: Boolean, default: false },
     boostExpiresAt: { type: Date, default: null },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // ===== METHODS =====
 
 UserSchema.methods.getJWT = async function () {
   const user = this;
-  const token = jwt.sign({ _id: user._id }, JWT_SECRET, {
-    expiresIn: "7d",
-  });
+  const { SignJWT } = await josePromise;
+  const token = await new SignJWT({ _id: user._id.toString() })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(Buffer.from(process.env.JWT_SECRET));
   return token;
 };
 
 UserSchema.methods.validatePassword = async function (passwordInputByUser) {
   const user = this;
   const passwordHash = user.password;
-  const isPasswordValid = await bcrypt.compare(passwordInputByUser, passwordHash);
+  const isPasswordValid = await bcrypt.compare(
+    passwordInputByUser,
+    passwordHash,
+  );
   return isPasswordValid;
 };
 
