@@ -26,7 +26,7 @@ authRouter.post("/signUp", async (req, res) => {
     res.cookie("token", token, {
       expires: new Date(Date.now() + 7 * 24 * 3600000), // 7 days
       httpOnly: true,
-      sameSite: "none",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       secure: process.env.NODE_ENV === "production",
     });
 
@@ -36,14 +36,14 @@ authRouter.post("/signUp", async (req, res) => {
   }
 });
 
-// POST /login (lowercase — matches frontend)
+// POST /login (lowercase â€" matches frontend)
 authRouter.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!validator.isEmail(email)) throw new Error("Invalid email address");
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+password");
     if (!user) throw new Error("Invalid credentials");
 
     const isPasswordValid = await user.validatePassword(password);
@@ -57,7 +57,7 @@ authRouter.post("/login", async (req, res) => {
     res.cookie("token", token, {
       expires: new Date(Date.now() + 7 * 24 * 3600000),
       httpOnly: true,
-      sameSite: "none",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       secure: process.env.NODE_ENV === "production",
     });
 
@@ -67,7 +67,7 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
-// POST /logout (lowercase — matches frontend)
+// POST /logout (lowercase â€" matches frontend)
 authRouter.post("/logout", async (req, res) => {
   try {
     res

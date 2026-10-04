@@ -32,6 +32,7 @@ const UserSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
+      select: false,
     },
     age: {
       type: Number,
@@ -167,7 +168,15 @@ const UserSchema = new mongoose.Schema(
     isBoosted: { type: Boolean, default: false },
     boostExpiresAt: { type: Date, default: null },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    toJSON: {
+      transform: (_document, result) => {
+        delete result.password;
+        return result;
+      },
+    },
+  },
 );
 
 // ===== METHODS =====
