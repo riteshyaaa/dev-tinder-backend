@@ -58,13 +58,15 @@ userRouter.get("/user/connections", userAuth, async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    const data = connectionRequests.map((row) => {
-      if (row.fromUserId._id.toString() === loggedInUser._id.toString()) {
-        return row.toUserId;
-      } else {
-        return row.fromUserId;
-      }
-    });
+    const data = connectionRequests
+      .filter((row) => row.fromUserId && row.toUserId)
+      .map((row) => {
+        if (row.fromUserId._id.toString() === loggedInUser._id.toString()) {
+          return row.toUserId;
+        } else {
+          return row.fromUserId;
+        }
+      });
 
     res.json({ data });
   } catch (err) {
@@ -121,22 +123,11 @@ userRouter.get("/feed", userAuth, async (req, res) => {
       filterQuery.location = { $regex: location, $options: "i" };
     }
 
-    // Smart Match: find users with COMPLEMENTARY skills (skills the logged-in user does NOT have)
-    if (smartMatch === "true" && loggedInUser.skills && loggedInUser.skills.length > 0) {
-      // Show users who have skills the current user doesn't
-      filterQuery.skills = {
-        ...filterQuery.skills,
-        $nin: undefined, // Remove if set
-        $not: { $size: 0 }, // Must have at least some skills
-      };
-      // Prefer users with different skills — we'll sort by this later
-      delete filterQuery.skills;
-      filterQuery.$and = [
-        { _id: { $nin: [...Array.from(hideUserIds), loggedInUser._id] } },
-        { skills: { $exists: true, $ne: [] } },
-      ];
-      // Remove redundant _id filter
-      delete filterQuery._id;
+    // Smart Match: prefer users who have skills registered
+    if (smartMatch === "true") {
+      if (!filterQuery.skills) {
+        filterQuery.skills = { $exists: true, $ne: [] };
+      }
     }
 
     // Build sort options

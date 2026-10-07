@@ -60,28 +60,10 @@ requestRouter.post(
 
       const data = await connectionRequest.save();
 
-      // Check if the OTHER user already sent an "interested" request to us
-      // (they swiped right on us before we swiped on them)
-      const reverseRequest = await ConnectionRequest.findOne({
-        fromUserId: toUserId,
-        toUserId: fromUserId,
-        status: "interested",
-      });
-
-      let isMatch = false;
-      if (reverseRequest && (status === "interested" || status === "superlike")) {
-        // Mutual interest detected — auto-accept both
-        reverseRequest.status = "accepted";
-        await reverseRequest.save();
-        data.status = "accepted";
-        await data.save();
-        isMatch = true;
-      }
-
       res.json({
-        message: isMatch ? "It's a match!" : "Request sent successfully",
+        message: "Request sent successfully",
         data,
-        isMatch,
+        isMatch: false,
         isSuperLike: status === "superlike",
       });
     } catch (err) {

@@ -69,7 +69,10 @@ projectRouter.post("/projects/:id/apply", userAuth, async (req, res) => {
     }
 
     // Check if already applied
-    if (project.applicants.includes(userId)) {
+    const hasAlreadyApplied = project.applicants.some(
+      (appId) => (appId?._id || appId).toString() === userId.toString(),
+    );
+    if (hasAlreadyApplied) {
       return res.status(400).json({ error: "Already applied" });
     }
 
