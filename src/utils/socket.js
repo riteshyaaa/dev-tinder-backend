@@ -336,20 +336,106 @@ const initializeSocket = (server) => {
       try {
         const payload = getPayload(rawPayload);
         const targetId = normalizeUserId(payload.targetId);
+        const callId =
+          typeof payload.callId === "string" ? payload.callId.slice(0, 200) : "";
         const peerId =
           typeof payload.peerId === "string" ? payload.peerId.slice(0, 200) : "";
-        if (!peerId || !(await areConnected(userId, targetId))) return;
+        if (!targetId || !(await areConnected(userId, targetId))) return;
 
-        emitToUser(targetId, "incomingCall", { fromUserId: userId, peerId });
+        emitToUser(targetId, "incomingCall", {
+          fromUserId: userId,
+          callId: callId || peerId || `call_${userId}_${Date.now()}`,
+          peerId,
+          fromUser: {
+            _id: userId,
+            firstName: socket.data.user?.firstName || "Developer",
+            lastName: socket.data.user?.lastName || "",
+            photoUrl: socket.data.user?.photoUrl || "",
+          },
+        });
       } catch (error) {
         console.error("Unable to start call:", error.message);
+      }
+    });
+
+    socket.on("acceptCall", async (rawPayload = {}) => {
+      try {
+        const payload = getPayload(rawPayload);
+        const targetId = normalizeUserId(payload.targetId);
+        const callId =
+          typeof payload.callId === "string" ? payload.callId.slice(0, 200) : "";
+        const peerId =
+          typeof payload.peerId === "string" ? payload.peerId.slice(0, 200) : "";
+        if (!targetId || !(await areConnected(userId, targetId))) return;
+
+        emitToUser(targetId, "callAccepted", {
+          fromUserId: userId,
+          callId: callId || peerId || "",
+          peerId,
+        });
+      } catch (error) {
+        console.error("Unable to accept call:", error.message);
+      }
+    });
+
+    socket.on("webrtcOffer", async (rawPayload = {}) => {
+      try {
+        const payload = getPayload(rawPayload);
+        const targetId = normalizeUserId(payload.targetId);
+        const offer = payload.offer;
+        const callId = typeof payload.callId === "string" ? payload.callId.slice(0, 200) : "";
+        if (!targetId || !offer || !(await areConnected(userId, targetId))) return;
+
+        emitToUser(targetId, "webrtcOffer", {
+          fromUserId: userId,
+          offer,
+          callId,
+        });
+      } catch (error) {
+        console.error("Unable to forward webrtcOffer:", error.message);
+      }
+    });
+
+    socket.on("webrtcAnswer", async (rawPayload = {}) => {
+      try {
+        const payload = getPayload(rawPayload);
+        const targetId = normalizeUserId(payload.targetId);
+        const answer = payload.answer;
+        const callId = typeof payload.callId === "string" ? payload.callId.slice(0, 200) : "";
+        if (!targetId || !answer || !(await areConnected(userId, targetId))) return;
+
+        emitToUser(targetId, "webrtcAnswer", {
+          fromUserId: userId,
+          answer,
+          callId,
+        });
+      } catch (error) {
+        console.error("Unable to forward webrtcAnswer:", error.message);
+      }
+    });
+
+    socket.on("webrtcIceCandidate", async (rawPayload = {}) => {
+      try {
+        const payload = getPayload(rawPayload);
+        const targetId = normalizeUserId(payload.targetId);
+        const candidate = payload.candidate;
+        const callId = typeof payload.callId === "string" ? payload.callId.slice(0, 200) : "";
+        if (!targetId || !candidate || !(await areConnected(userId, targetId))) return;
+
+        emitToUser(targetId, "webrtcIceCandidate", {
+          fromUserId: userId,
+          candidate,
+          callId,
+        });
+      } catch (error) {
+        console.error("Unable to forward webrtcIceCandidate:", error.message);
       }
     });
 
     socket.on("endCall", async (rawPayload = {}) => {
       try {
         const targetId = normalizeUserId(getPayload(rawPayload).targetId);
-        if (!(await areConnected(userId, targetId))) return;
+        if (!targetId) return;
 
         emitToUser(targetId, "callEnded", { fromUserId: userId });
       } catch (error) {
